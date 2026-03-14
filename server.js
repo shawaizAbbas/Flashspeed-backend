@@ -29,8 +29,8 @@ const UserSchema = new mongoose.Schema({
 const User = mongoose.model('User', UserSchema);
 
 let gameState = { multiplier: 1.00, crashPoint: 0, status: "PREPARING", history: [] };
-let activeBets = []; // Those currently flying
-let queuedBets = []; // Those waiting for next round
+let activeBets = []; 
+let queuedBets = []; 
 let manualCrashTriggered = false;
 
 function startRound() {
@@ -38,7 +38,6 @@ function startRound() {
     gameState.multiplier = 1.00;
     manualCrashTriggered = false;
     
-    // Transfer queued to active
     activeBets = [...queuedBets];
     queuedBets = [];
     
@@ -46,15 +45,15 @@ function startRound() {
     if (gameState.crashPoint < 1.01) gameState.crashPoint = 1.01;
     
     io.emit('game_state', { status: "PREPARING", history: gameState.history });
-    
-    // Send fake players betting at the start
-    const fakeCount = Math.floor(Math.random() * 10) + 5;
-    const fakePlayers = [];
-    const names = ["Ahmed", "Ali", "Zain", "Lucas", "Musa", "Sara", "John", "Elena", "Khan", "Sabiri"];
-    for(let i=0; i<fakeCount; i++) {
-        fakePlayers.push({ name: names[Math.floor(Math.random()*names.length)], amt: (Math.random()*100).toFixed(0) });
+    io.emit('admin_update_bets', activeBets);
+
+    // Generate Fake Players
+    const names = ["Ahmed", "Ali", "Zain", "Lucas", "Musa", "Sara", "John", "Elena", "Khan", "Sabiri", "Leo", "Mila"];
+    let fakes = [];
+    for(let i=0; i<12; i++) {
+        fakes.push({ name: names[Math.floor(Math.random()*names.length)], amt: (Math.random()*100 + 10).toFixed(0), cashed: false });
     }
-    io.emit('fake_round_start', fakePlayers);
+    io.emit('fake_list', fakes);
 
     setTimeout(() => {
         gameState.status = "FLYING";
@@ -68,9 +67,9 @@ function runFlightLoop() {
         gameState.multiplier += (gameState.multiplier * 0.006) + 0.01;
         io.emit('tick', gameState.multiplier.toFixed(2));
 
-        // Greed Logic: Only some fake players cash out. Others stay and lose.
-        if(Math.random() < 0.10) {
-            io.emit('fake_cashout_event', { mult: gameState.multiplier.toFixed(2) });
+        // Randomly make a fake player cash out
+        if(Math.random() < 0.15) {
+            io.emit('fake_cashout_now', { mult: gameState.multiplier.toFixed(2) });
         }
 
         if (gameState.multiplier >= gameState.crashPoint || manualCrashTriggered) {
@@ -102,7 +101,7 @@ io.on('connection', (socket) => {
             const betObj = { u: data.u, amt: data.amt, cashed: false };
             if(gameState.status === "PREPARING") activeBets.push(betObj);
             else queuedBets.push(betObj);
-            socket.emit('update_balance', user.balance);
+            io.to(user.username).emit('update_balance', user.balance);
             io.emit('admin_update_bets', {active: activeBets, queued: queuedBets});
         }
     });
@@ -115,18 +114,17 @@ io.on('connection', (socket) => {
             const win = activeBets[bIndex].amt * gameState.multiplier;
             user.balance += win;
             await user.save();
-            socket.emit('update_balance', user.balance);
-            socket.emit('cashout_confirmed', { win: win.toFixed(2) });
+            io.to(user.username).emit('update_balance', user.balance);
+            socket.emit('cashout_ok', { win: win.toFixed(2) });
             io.emit('admin_update_bets', {active: activeBets, queued: queuedBets});
         }
     });
 
-    // Admin controls
-    socket.on('admin_crash_now', () => { manualCrashTriggered = true; });
     socket.on('admin_get_users', async () => {
         const users = await User.find({});
         socket.emit('admin_user_list', users);
     });
+
     socket.on('admin_adjust_balance', async (data) => {
         const user = await User.findOne({ username: data.u });
         if (user) {
@@ -137,11 +135,19 @@ io.on('connection', (socket) => {
             const users = await User.find({}); socket.emit('admin_user_list', users);
         }
     });
-    socket.on('admin_delete_user', async (u) => { await User.deleteOne({ username: u }); const users = await User.find({}); io.emit('admin_user_list', users); });
+
+    socket.on('admin_delete_user', async (u) => {
+        await User.deleteOne({ username: u });
+        const users = await User.find({}); socket.emit('admin_user_list', users);
+    });
+
     socket.on('admin_block_user', async (u) => {
         const user = await User.findOne({ username: u });
-        if(user) { user.isBlocked = !user.isBlocked; await user.save(); const users = await User.find({}); io.emit('admin_user_list', users); }
+        if(user) { user.isBlocked = !user.isBlocked; await user.save(); 
+        const users = await User.find({}); socket.emit('admin_user_list', users); }
     });
+
+    socket.on('admin_crash_now', () => { manualCrashTriggered = true; });
 });
 
 const PORT = process.env.PORT || 10000;
