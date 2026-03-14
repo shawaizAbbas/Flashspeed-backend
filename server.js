@@ -39,7 +39,6 @@ function startRound() {
     manualCrashTriggered = false;
     gameState.crashPoint = (0.99 / (1 - Math.random())).toFixed(2);
     if (gameState.crashPoint < 1.01) gameState.crashPoint = 1.01;
-    
     io.emit('game_state', { status: "PREPARING", history: gameState.history });
     setTimeout(() => {
         gameState.status = "FLYING";
@@ -81,7 +80,6 @@ io.on('connection', (socket) => {
         if (!user) return socket.emit('login_error', "Username not found!");
         if (user.password !== data.p) return socket.emit('login_error', "Wrong Password!");
         if (user.isBlocked) return socket.emit('login_error', "Account BLOCKED!");
-        
         socket.join(user.username);
         socket.emit('login_success', { u: user.username, balance: user.balance, history: gameState.history });
     });
