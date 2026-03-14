@@ -37,21 +37,18 @@ function startRound() {
     gameState.status = "PREPARING";
     gameState.multiplier = 1.00;
     manualCrashTriggered = false;
-    
     activeBets = [...queuedBets];
     queuedBets = [];
-    
     gameState.crashPoint = (0.99 / (1 - Math.random())).toFixed(2);
     if (gameState.crashPoint < 1.01) gameState.crashPoint = 1.01;
     
     io.emit('game_state', { status: "PREPARING", history: gameState.history });
-    io.emit('admin_update_bets', activeBets);
-
-    // Generate Fake Players
-    const names = ["Ahmed", "Ali", "Zain", "Lucas", "Musa", "Sara", "John", "Elena", "Khan", "Sabiri", "Leo", "Mila"];
+    
+    // Send Fake Players
+    const names = ["Ahmed", "Ali", "Zain", "Lucas", "Musa", "Sara", "John", "Elena", "Khan", "Sabiri"];
     let fakes = [];
-    for(let i=0; i<12; i++) {
-        fakes.push({ name: names[Math.floor(Math.random()*names.length)], amt: (Math.random()*100 + 10).toFixed(0), cashed: false });
+    for(let i=0; i<10; i++) {
+        fakes.push({ name: names[Math.floor(Math.random()*names.length)], amt: (Math.random()*100).toFixed(0) });
     }
     io.emit('fake_list', fakes);
 
@@ -67,9 +64,8 @@ function runFlightLoop() {
         gameState.multiplier += (gameState.multiplier * 0.006) + 0.01;
         io.emit('tick', gameState.multiplier.toFixed(2));
 
-        // Randomly make a fake player cash out
-        if(Math.random() < 0.15) {
-            io.emit('fake_cashout_now', { mult: gameState.multiplier.toFixed(2) });
+        if(Math.random() < 0.1) {
+            io.emit('fake_cashout_event', { mult: gameState.multiplier.toFixed(2) });
         }
 
         if (gameState.multiplier >= gameState.crashPoint || manualCrashTriggered) {
@@ -102,7 +98,6 @@ io.on('connection', (socket) => {
             if(gameState.status === "PREPARING") activeBets.push(betObj);
             else queuedBets.push(betObj);
             io.to(user.username).emit('update_balance', user.balance);
-            io.emit('admin_update_bets', {active: activeBets, queued: queuedBets});
         }
     });
 
@@ -116,7 +111,6 @@ io.on('connection', (socket) => {
             await user.save();
             io.to(user.username).emit('update_balance', user.balance);
             socket.emit('cashout_ok', { win: win.toFixed(2) });
-            io.emit('admin_update_bets', {active: activeBets, queued: queuedBets});
         }
     });
 
@@ -143,8 +137,7 @@ io.on('connection', (socket) => {
 
     socket.on('admin_block_user', async (u) => {
         const user = await User.findOne({ username: u });
-        if(user) { user.isBlocked = !user.isBlocked; await user.save(); 
-        const users = await User.find({}); socket.emit('admin_user_list', users); }
+        if(user) { user.isBlocked = !user.isBlocked; await user.save(); const users = await User.find({}); io.emit('admin_user_list', users); }
     });
 
     socket.on('admin_crash_now', () => { manualCrashTriggered = true; });
