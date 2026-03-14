@@ -19,7 +19,7 @@ const io = new Server(server, { cors: { origin: "*", methods: ["GET", "POST"] } 
 
 const mongoURI = process.env.MONGO_URI; 
 let isDbConnected = false;
-mongoose.connect(mongoURI).then(() => { isDbConnected = true; console.log("✅ DB Connected"); }).catch(err => console.log("❌ DB Error: ", err.message));
+mongoose.connect(mongoURI).then(() => { isDbConnected = true; console.log("✅ DB Connected"); }).catch(err => console.log("❌ DB Error"));
 
 const UserSchema = new mongoose.Schema({
     username: { type: String, unique: true, required: true },
@@ -49,9 +49,8 @@ function runFlightLoop() {
         gameState.multiplier += (gameState.multiplier * 0.005) + 0.01;
         io.emit('tick', gameState.multiplier.toFixed(2));
 
-        // Send Fake Players to Client Lobby
-        if(Math.random() < 0.08) {
-            const names = ["Ahmed", "Ali", "Zain", "Lucas", "Musa", "John", "Sara", "Elena"];
+        if(Math.random() < 0.05) {
+            const names = ["Ahmed", "Ali", "Zain", "Lucas", "Musa", "Sara"];
             io.emit('fake_cashout', { name: names[Math.floor(Math.random()*names.length)], mult: gameState.multiplier.toFixed(2) });
         }
 
@@ -69,7 +68,7 @@ function runFlightLoop() {
 
 io.on('connection', (socket) => {
     socket.on('login', async (data) => {
-        if (!isDbConnected) return socket.emit('login_error', "DB starting...");
+        if (!isDbConnected) return;
         const user = await User.findOne({ username: data.u.toLowerCase(), password: data.p });
         if (user) {
             socket.join(user.username);
@@ -79,10 +78,13 @@ io.on('connection', (socket) => {
 
     socket.on('place_bet', async (data) => {
         const user = await User.findOne({ username: data.u.toLowerCase() });
-        if (user && user.balance >= data.amt && gameState.status === "PREPARING") {
+        if (user && user.balance >= data.amt) {
             user.balance -= data.amt;
             await user.save();
-            activeBets.push({ u: data.u.toLowerCase(), amt: data.amt, cashed: false });
+            // Only add to active bets if in PREPARING phase
+            if(gameState.status === "PREPARING") {
+                activeBets.push({ u: data.u.toLowerCase(), amt: data.amt, cashed: false });
+            }
             socket.emit('update_balance', user.balance);
         }
     });
