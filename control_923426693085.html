@@ -3,78 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flashspeed Admin - OWNER</title>
-    <!-- 1. Load Socket.io Library -->
+    <title>Flashspeed Control</title>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <style>
-        body { background: #050510; color: white; font-family: sans-serif; padding: 20px; }
-        .card { background: #111125; padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #444; }
-        input { padding: 12px; margin: 10px 0; background: #000; border: 1px solid #333; color: #fff; width: 100%; box-sizing: border-box; border-radius: 5px; }
-        button { width: 100%; padding: 15px; background: #00f2ff; border: none; font-weight: bold; cursor: pointer; border-radius: 5px; color: #000; font-size: 1rem; }
+        body { background: #050510; color: white; font-family: sans-serif; padding: 20px; text-align: center; }
+        .card { background: #111125; padding: 20px; border-radius: 15px; border: 1px solid #444; margin-bottom: 20px; text-align: left; }
+        input { width: 100%; padding: 12px; margin: 10px 0; background: #000; border: 1px solid #333; color: #fff; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; background: #00f2ff; border: none; font-weight: bold; cursor: pointer; color: #000; }
         .user-row { background: #000; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 5px solid #39ff14; }
-        .btn-funds { background: #39ff14; padding: 5px 10px; margin-top: 10px; width: auto; font-size: 0.8rem; }
-        h1 { color: #00f2ff; text-align: center; }
+        #status-bar { padding: 5px; font-size: 0.8rem; margin-bottom: 10px; border-radius: 5px; }
     </style>
 </head>
 <body>
 
-    <h1>CONTROL CENTER</h1>
+    <h1 style="color: #00f2ff;">CONTROL CENTER</h1>
+    <div id="status-bar" style="background: orange; color: black;">WAITING FOR SERVER...</div>
 
-    <!-- CREATE USER SECTION -->
     <div class="card">
-        <h3>Create New Player Account</h3>
-        <input type="text" id="nu" placeholder="New Username">
-        <input type="text" id="np" placeholder="New Password">
-        <button onclick="addUser()">CREATE USER ACCOUNT</button>
+        <h3>Create New User</h3>
+        <input type="text" id="nu" placeholder="Username">
+        <input type="text" id="np" placeholder="Password">
+        <button onclick="addUser()">CREATE USER</button>
     </div>
 
-    <!-- LIVE LIST SECTION -->
     <div class="card">
-        <h3>Live User List & Funds</h3>
-        <div id="ulist">Connecting to server...</div>
+        <h3>User List</h3>
+        <div id="ulist">Loading users...</div>
     </div>
 
     <script>
-        // 2. Connect to your Render Backend
-        const socket = io("https://flashspeed-backend.onrender.com", {
-            transports: ["websocket"]
-        });
+        // CRITICAL FIX: No URL needed, it finds itself!
+        const socket = io();
 
-        // Test connection
+        const status = document.getElementById('status-bar');
+
         socket.on('connect', () => {
-            console.log("Admin Connected!");
-            socket.emit('admin_get_users'); // Get list immediately
+            status.innerText = "CONNECTED TO BRAIN ✅";
+            status.style.background = "#39ff14";
+            socket.emit('admin_get_users');
         });
 
-        // Function: Create Account
+        socket.on('disconnect', () => {
+            status.innerText = "LOST CONNECTION ❌";
+            status.style.background = "red";
+        });
+
         function addUser() {
             const u = document.getElementById('nu').value;
             const p = document.getElementById('np').value;
-            if(!u || !p) return alert("Please fill Username and Password");
-            
+            if(!u || !p) return alert("Fill fields");
             socket.emit('admin_create_user', { u: u, p: p });
-            alert("Sent: Account creation request for " + u);
             document.getElementById('nu').value = "";
             document.getElementById('np').value = "";
         }
 
-        // Function: Update Balance
         function setBalance(u) {
-            const amt = prompt("Enter new total balance for " + u);
-            if(amt !== null && amt !== "") {
-                socket.emit('admin_set_balance', { u: u, amt: amt });
-            }
+            const amt = prompt("New balance for " + u);
+            if(amt !== null) socket.emit('admin_set_balance', { u: u, amt: amt });
         }
 
-        // Receive List of Users from Server
         socket.on('admin_user_list', (users) => {
             const list = document.getElementById('ulist');
             list.innerHTML = "";
-            if(users.length === 0) {
-                list.innerHTML = "No users found in database.";
-                return;
-            }
+            if(!users || users.length === 0) { list.innerHTML = "No users found."; return; }
             users.forEach(u => {
                 list.innerHTML += `
                     <div class="user-row">
-                        <div><b>USER: ${u.username.toUpperCase()}</b></div>
+                        <b>${u.username.toUpperCase()}</b><br>
+                        Balance: <span style="color:#39ff14">$${u.balance.toFixed(2)}</span><br>
+                        <button style="width:auto; padding:5px 10px; margin-top:5px; background:#39ff14;" onclick="setBalance('${u.username}')">EDIT MONEY</button>
+                    </div>`;
+            });
+        });
+    </script>
+</body>
+</html>
