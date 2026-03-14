@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashspeed Elite</title>
+    <!-- Socket.io Library -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        :root { --bg: #050510; --panel: #111125; --neon: #00f2ff; --green: #39ff14; --yellow: #fff200; --red: #ff0055; --text: #fff; }
+        body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; overflow-x: hidden; }
+        
+        /* Login Screen */
+        #login-screen { height: 100vh; display: flex; justify-content: center; align-items: center; background: radial-gradient(circle, #111125 0%, #050510 100%); }
+        .login-box { background: var(--panel); padding: 40px; border-radius: 20px; border: 2px solid var(--neon); width: 320px; text-align: center; }
+        .contact-card { background: #000; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px dashed var(--neon); }
+        .login-box input { width: 100%; padding: 12px; margin: 10px 0; background: #000; border: 1px solid #333; color: #fff; border-radius: 5px; box-sizing: border-box; }
+        .btn-login { width: 100%; padding: 15px; background: var(--neon); border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
+
+        /* Game UI */
+        #game-screen { display: none; }
+        .main-wrapper { width: 100%; max-width: 1100px; display: grid; grid-template-columns: 280px 1fr; gap: 15px; padding: 15px; margin: auto; height: 95vh; box-sizing: border-box; }
+        .lobby { background: var(--panel); border-radius: 15px; padding: 15px; overflow-y: hidden; display: flex; flex-direction: column; border: 1px solid #222; }
+        .lobby-title { font-size: 0.9rem; font-weight: bold; color: var(--neon); margin-bottom: 10px; text-transform: uppercase; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        .player-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #1a1a35; font-size: 0.8rem; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; background: var(--panel); padding: 10px 20px; border-radius: 15px; }
+        .balance-box { color: var(--green); font-weight: bold; font-size: 1.2rem; }
+        
+        #viewport { height: 350px; background: #000; border-radius: 20px; position: relative; overflow: hidden; border: 2px solid #1f1f35; }
+        #multiplier { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 5rem; font-weight: 900; z-index: 10; }
+        #craft { position: absolute; font-size: 50px; left: 20%; bottom: 30%; z-index: 5; display: none; }
+        
+        .history-bar { display: flex; gap: 5px; height: 30px; overflow: hidden; margin-bottom: 5px; }
+        .hist-item { background: #1a1a35; padding: 2px 10px; border-radius: 20px; font-size: 0.75rem; border: 1px solid #333; }
+
+        .btn { width: 100%; height: 60px; border-radius: 10px; border: none; font-weight: bold; font-size: 1.2rem; cursor: pointer; text-transform: uppercase; margin-top: 10px; }
+        .btn-bet { background: var(--green); color: #000; }
+        .btn-cash { background: var(--yellow); color: #000; }
+        .btn-cancel { background: var(--red); color: #fff; }
+        .btn-wait { background: #222; color: #555; cursor: not-allowed; }
+
+        .phase-ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 20; display: none; flex-direction: column; justify-content: center; align-items: center; }
+    </style>
+</head>
+<body>
+
+<div id="login-screen">
+    <div class="login-box">
+        <h1 style="color:var(--neon); margin-top:0;">FLASHSPEED</h1>
+        <div class="contact-card">
+            <div style="font-size: 0.7rem; color: #888;">CONTACT AGENT FOR ACCOUNT</div>
+            <div style="font-size: 1.3rem; color: var(--neon); font-weight: bold;">00923426693085</div>
+        </div>
+        <input type="text" id="login-user" placeholder="Username">
+        <input type="password" id="login-pass" placeholder="Password">
+        <button class="btn-login" onclick="attemptLogin()">LOGIN</button>
+    </div>
+</div>
+
+<div id="game-screen">
+    <div class="main-wrapper">
+        <div class="lobby">
+            <div class="lobby-title">Live Bets</div>
+            <div id="player-list"></div>
+        </div>
+        <div class="game-column">
+            <div class="header">
+                <div style="font-weight: 900; color: var(--neon);" id="user-display">PLAYER</div>
+                <div class="balance-box">$<span id="balance">0.00</span></div>
+            </div>
+            <div class="history-bar" id="history"></div>
+            <div id="viewport">
+                <div id="multiplier">1.00x</div>
+                <div id="craft">🚀</div>
+                <div class="phase-ui" id="phase-ui"><div>PREPARING NEXT ROUND</div></div>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                <div class="panel" style="background:var(--panel); padding:15px; border-radius:15px;">
+                    <input type="number" id="amt-1" value="10" style="width:100%; background:#000; color:#fff; border:1px solid #333; padding:8px;">
+                    <button id="btn-1" class="btn btn-bet" onclick="handleInput(1)">BET</button>
+                </div>
+                <div class="panel" style="background:var(--panel); padding:15px; border-radius:15px;">
+                    <input type="number" id="amt-2" value="10" style="width:100%; background:#000; color:#fff; border:1px solid #333; padding:8px;">
+                    <button id="btn-2" class="btn btn-bet" onclick="handleInput(2)">BET</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- CONNECT TO YOUR RENDER BACKEND ---
+    const socket = io("https://flashspeed-backend.onrender.com");
+
+    let currentUser = null;
+    let wallet = 0;
+    let playerBets = { 1: { state: "NONE", amount: 0 }, 2: { state: "NONE", amount: 0 } };
+
+    function attemptLogin() {
+        const u = document.getElementById('login-user').value;
+        const p = document.getElementById('login-pass').value;
+        socket.emit('login', { u: u, p: p });
+    }
+
+    socket.on('login_success', (data) => {
+        currentUser = data.u;
+        wallet = data.balance;
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('game-screen').style.display = 'block';
+        document.getElementById('user-display').innerText = data.u.toUpperCase();
+        document.getElementById('balance').innerText = wallet.toFixed(2);
+        renderHistory(data.history);
+    });
+
+    socket.on('login_error', (msg) => alert(msg));
+
+    socket.on('tick', (m) => {
+        document.getElementById('multiplier').innerText = m + "x";
+    });
+
+    socket.on('game_state', (data) => {
+        const phase = document.getElementById('phase-ui');
+        if(data.status === "PREPARING") {
+            phase.style.display = 'flex';
+            document.getElementById('craft').style.display = 'none';
+            document.getElementById('multiplier').style.color = "#fff";
+            renderHistory(data.history);
+        } else {
+            phase.style.display = 'none';
+            document.getElementById('craft').style.display = 'block';
+        }
+    });
+
+    socket.on('crash', (data) => {
+        document.getElementById('multiplier').innerText = "FLEW AWAY";
+        document.getElementById('multiplier').style.color = "var(--red)";
+        renderHistory(data.history);
+        resetButtons();
+    });
+
+    socket.on('update_balance', (b) => {
+        wallet = b;
+        document.getElementById('balance').innerText = wallet.toFixed(2);
+    });
+
+    socket.on('forced_logout', (msg) => { alert(msg); location.reload(); });
+
+    function handleInput(num) {
+        const btn = document.getElementById(`btn-${num}`);
+        const amt = parseFloat(document.getElementById(`amt-${num}`).value);
+
+        if (playerBets[num].state === "NONE") {
+            if (amt > wallet || amt <= 0) return alert("Contact 00923426693085 to add funds");
+            socket.emit('place_bet', { u: currentUser, amt: amt });
+            playerBets[num] = { state: "QUEUED", amount: amt };
+            btn.innerText = "CANCEL";
+            btn.className = "btn btn-cancel";
+        } else if (playerBets[num].state === "QUEUED") {
+            // Cancel not implemented in server yet, but we reset UI for now
+            location.reload(); 
+        } else if (playerBets[num].state === "ACTIVE") {
+            socket.emit('cashout', { u: currentUser });
+            btn.innerText = "CASHED";
+            btn.className = "btn btn-wait";
+            btn.disabled = true;
+        }
+    }
+
+    function resetButtons() {
+        for(let i=1; i<=2; i++) {
+            const btn = document.getElementById(`btn-${i}`);
+            btn.innerText = "BET";
+            btn.className = "btn btn-bet";
+            btn.disabled = false;
+            playerBets[i] = { state: "NONE", amount: 0 };
+        }
+    }
+
+    function renderHistory(list) {
+        if(!list) return;
+        const h = document.getElementById('history');
+        h.innerHTML = "";
+        list.forEach(item => {
+            h.innerHTML += `<div class="hist-item">${item}x</div>`;
+        });
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Flashspeed Admin - OWNER</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        body { background: #050510; color: white; font-family: sans-serif; padding: 20px; }
+        .card { background: #111125; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #444; }
+        input { padding: 12px; margin: 5px; background: #000; border: 1px solid #333; color: #fff; width: 200px; }
+        button { padding: 12px 20px; background: #00f2ff; border: none; font-weight: bold; cursor: pointer; border-radius: 5px; }
+        .user-row { background: #000; padding: 15px; margin: 10px 0; display: flex; justify-content: space-between; align-items: center; border-radius: 8px; border-left: 5px solid #39ff14; }
+    </style>
+</head>
+<body>
+
+    <h1 style="color:#00f2ff">FLASHSPEED CONTROL CENTER</h1>
+
+    <div class="card">
+        <h3>Create Account</h3>
+        <input type="text" id="nu" placeholder="Username">
+        <input type="text" id="np" placeholder="Password">
+        <button onclick="addUser()">CREATE USER</button>
+    </div>
+
+    <div class="card">
+        <h3>Live User List & Fund Control</h3>
+        <div id="ulist">Connecting...</div>
+    </div>
+
+    <script>
+        // --- CONNECT TO YOUR RENDER BACKEND ---
+        const socket = io("https://flashspeed-backend.onrender.com");
+
+        function addUser() {
+            const u = document.getElementById('nu').value;
+            const p = document.getElementById('np').value;
+            if(!u || !p) return;
+            socket.emit('admin_create_user', { u: u, p: p });
+            alert("Sent: Account creation for " + u);
+        }
+
+        function setBalance(u) {
+            const amt = prompt("Enter new balance for " + u);
+            if(amt !== null) socket.emit('admin_set_balance', { u: u, amt: amt });
+        }
+
+        function blockUser(u) {
+            if(confirm("Block " + u + "?")) socket.emit('admin_block_user', u);
+        }
+
+        function unblockUser(u) {
+            socket.emit('admin_unblock_user', u);
+        }
+
+        socket.on('connect', () => {
+            socket.emit('admin_get_users');
+        });
+
+        socket.on('admin_user_list', (users) => {
+            const list = document.getElementById('ulist');
+            list.innerHTML = "";
+            users.forEach(u => {
+                let status = u.isBlocked ? "<span style='color:red;'>BLOCKED</span>" : "<span style='color:#39ff14;'>ACTIVE</span>";
+                list.innerHTML += `
+                    <div class="user-row">
+                        <span><b>${u.username.toUpperCase()}</b> (Pass: ${u.password})<br>Balance: <b>$${u.balance.toFixed(2)}</b> [${status}]</span>
+                        <div>
+                            <button onclick="setBalance('${u.username}')" style="background:#39ff14; color:#000;">SET FUNDS</button>
+                            <button onclick="blockUser('${u.username}')" style="background:red; color:#fff;">BLOCK</button>
+                            <button onclick="unblockUser('${u.username}')" style="background:gray; color:#fff;">UNBLOCK</button>
+                        </div>
+                    </div>`;
+            });
+        });
+    </script>
+</body>
+</html>
