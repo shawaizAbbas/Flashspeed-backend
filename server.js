@@ -9,27 +9,27 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Tells server to show your HTML files
-app.use(express.static(__dirname));
+// --- FORCE SERVE FILES ---
+// This tells the server exactly where to find your files
+app.use(express.static(path.join(__dirname)));
 
+// If you visit the main link, show index.html
 app.get('/', (req, res) => {
-    res.send('<h1>Flashspeed Server is Live</h1><p>Checking Database...</p>');
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// If you visit /admin, show the admin file
+// CHANGE 'control_00923426693085.html' to whatever your file is named!
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'control_00923426693085.html'));
 });
 
 const server = http.createServer(app);
-const io = new Server(server, { 
-    cors: { origin: "*", methods: ["GET", "POST"] } 
-});
+const io = new Server(server, { cors: { origin: "*", methods: ["GET", "POST"] } });
 
-// Database Connection
 const mongoURI = process.env.MONGO_URI; 
-
-if (!mongoURI) {
-    console.log("❌ ERROR: MONGO_URI is missing in Render Settings!");
-} else {
-    mongoose.connect(mongoURI)
-        .then(() => console.log("✅ MongoDB Connected"))
-        .catch(err => console.log("❌ MongoDB Error: " + err.message));
+if (mongoURI) {
+    mongoose.connect(mongoURI).then(() => console.log("✅ MongoDB Connected")).catch(err => console.log("❌ DB Error: " + err.message));
 }
 
 const UserSchema = new mongoose.Schema({
