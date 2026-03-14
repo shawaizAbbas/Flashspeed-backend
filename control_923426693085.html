@@ -3,78 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flashspeed Control</title>
+    <title>Flashspeed Master Control</title>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <style>
-        body { background: #050510; color: white; font-family: sans-serif; padding: 20px; text-align: center; }
-        .card { background: #111125; padding: 20px; border-radius: 15px; border: 1px solid #444; margin-bottom: 20px; text-align: left; }
-        input { width: 100%; padding: 12px; margin: 10px 0; background: #000; border: 1px solid #333; color: #fff; box-sizing: border-box; }
-        button { width: 100%; padding: 15px; background: #00f2ff; border: none; font-weight: bold; cursor: pointer; color: #000; }
-        .user-row { background: #000; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 5px solid #39ff14; }
-        #status-bar { padding: 5px; font-size: 0.8rem; margin-bottom: 10px; border-radius: 5px; }
+        body { background: #050510; color: white; font-family: sans-serif; padding: 15px; }
+        .card { background: #111125; padding: 15px; border-radius: 12px; border: 1px solid #333; margin-bottom: 15px; }
+        input { width: 100%; padding: 10px; margin: 8px 0; background: #000; border: 1px solid #444; color: #fff; }
+        button { padding: 12px; border: none; font-weight: bold; cursor: pointer; border-radius: 5px; }
+        .btn-crash { background: #ff0055; width: 100%; font-size: 1.5rem; color: white; margin-bottom: 15px; }
+        .user-row { background: #000; padding: 10px; margin: 8px 0; border-left: 4px solid #00f2ff; font-size: 0.85rem; }
+        .bet-row { color: #39ff14; font-weight: bold; border-bottom: 1px solid #222; padding: 5px 0; }
+        .blocked { border-left-color: red; opacity: 0.6; }
     </style>
 </head>
 <body>
 
-    <h1 style="color: #00f2ff;">CONTROL CENTER</h1>
-    <div id="status-bar" style="background: orange; color: black;">WAITING FOR SERVER...</div>
+    <h2 style="color:#00f2ff; text-align:center;">FLASH MASTER PANEL</h2>
+    
+    <button class="btn-crash" onclick="socket.emit('admin_crash_now')">💥 CRASH GAME NOW</button>
 
     <div class="card">
-        <h3>Create New User</h3>
-        <input type="text" id="nu" placeholder="Username">
-        <input type="text" id="np" placeholder="Password">
-        <button onclick="addUser()">CREATE USER</button>
+        <h3>Live Player Bets</h3>
+        <div id="bet-monitor">No active bets</div>
     </div>
 
     <div class="card">
-        <h3>User List</h3>
-        <div id="ulist">Loading users...</div>
+        <h3>Create User</h3>
+        <input type="text" id="nu" placeholder="Username">
+        <input type="text" id="np" placeholder="Password">
+        <button style="background:#00f2ff; width:100%;" onclick="addUser()">CREATE USER</button>
+    </div>
+
+    <div class="card">
+        <h3>All Users</h3>
+        <div id="ulist">Loading...</div>
     </div>
 
     <script>
-        // CRITICAL FIX: No URL needed, it finds itself!
         const socket = io();
-
-        const status = document.getElementById('status-bar');
-
-        socket.on('connect', () => {
-            status.innerText = "CONNECTED TO BRAIN ✅";
-            status.style.background = "#39ff14";
-            socket.emit('admin_get_users');
-        });
-
-        socket.on('disconnect', () => {
-            status.innerText = "LOST CONNECTION ❌";
-            status.style.background = "red";
-        });
+        socket.on('connect', () => socket.emit('admin_get_users'));
 
         function addUser() {
-            const u = document.getElementById('nu').value;
-            const p = document.getElementById('np').value;
-            if(!u || !p) return alert("Fill fields");
-            socket.emit('admin_create_user', { u: u, p: p });
-            document.getElementById('nu').value = "";
-            document.getElementById('np').value = "";
+            socket.emit('admin_create_user', { u: document.getElementById('nu').value, p: document.getElementById('np').value });
+            document.getElementById('nu').value = ""; document.getElementById('np').value = "";
         }
 
-        function setBalance(u) {
-            const amt = prompt("New balance for " + u);
-            if(amt !== null) socket.emit('admin_set_balance', { u: u, amt: amt });
-        }
+        socket.on('admin_update_bets', (bets) => {
+            const monitor = document.getElementById('bet-monitor');
+            monitor.innerHTML = bets.length ? "" : "No active bets";
+            bets.forEach(b => {
+                monitor.innerHTML += `<div class="bet-row">${b.u.toUpperCase()}: $${b.amt} ${b.cashed ? '✅' : '⏳'}</div>`;
+            });
+        });
 
         socket.on('admin_user_list', (users) => {
             const list = document.getElementById('ulist');
             list.innerHTML = "";
-            if(!users || users.length === 0) { list.innerHTML = "No users found."; return; }
             users.forEach(u => {
                 list.innerHTML += `
-                    <div class="user-row">
-                        <b>${u.username.toUpperCase()}</b><br>
-                        Balance: <span style="color:#39ff14">$${u.balance.toFixed(2)}</span><br>
-                        <button style="width:auto; padding:5px 10px; margin-top:5px; background:#39ff14;" onclick="setBalance('${u.username}')">EDIT MONEY</button>
+                    <div class="user-row ${u.isBlocked ? 'blocked' : ''}">
+                        <b>${u.username.toUpperCase()}</b> (Pass: ${u.password})<br>
+                        Balance: <b style="color:#39ff14">$${u.balance.toFixed(2)}</b><br>
+                        <button onclick="setBal('${u.username}')" style="background:#39ff14">SET $</button>
+                        <button onclick="socket.emit('admin_block_user', '${u.username}')" style="background:orange">${u.isBlocked ? 'UNBLOCK' : 'BLOCK'}</button>
+                        <button onclick="if(confirm('Delete?')) socket.emit('admin_delete_user', '${u.username}')" style="background:red; color:white;">DELETE</button>
                     </div>`;
             });
         });
+
+        function setBal(u) {
+            const amt = prompt("New balance for " + u);
+            if(amt !== null) socket.emit('admin_set_balance', { u: u, amt: amt });
+        }
     </script>
 </body>
 </html>
