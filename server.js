@@ -9,25 +9,31 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// This tells the server to look in the main folder for your HTML files
-app.use(express.static(path.join(__dirname)));
+// This tells the server exactly where your files are
+const directory = path.resolve();
+app.use(express.static(directory));
 
-// Route for Player
+// Show a message on the main page to prove it is working
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.join(directory, 'index.html'));
 });
 
-// Route for Admin (MATCHES YOUR GITHUB FILENAME EXACTLY)
+// The Admin Link
 app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, 'control_923426693085.html'));
+    res.sendFile(path.join(directory, 'control_923426693085.html'));
 });
 
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*", methods: ["GET", "POST"] } });
+const io = new Server(server, { 
+    cors: { origin: "*", methods: ["GET", "POST"] } 
+});
 
+// Database - With a timeout so it doesn't stay stuck on a white screen
 const mongoURI = process.env.MONGO_URI; 
 if (mongoURI) {
-    mongoose.connect(mongoURI).then(() => console.log("✅ MongoDB Connected")).catch(err => console.log("❌ DB Error: " + err.message));
+    mongoose.connect(mongoURI, { serverSelectionTimeoutMS: 5000 })
+        .then(() => console.log("✅ MongoDB Connected"))
+        .catch(err => console.log("❌ DB Error: " + err.message));
 }
 
 const UserSchema = new mongoose.Schema({
@@ -84,31 +90,6 @@ io.on('connection', (socket) => {
         } catch (e) { socket.emit('login_error', "DB Error"); }
     });
 
-    socket.on('place_bet', async (data) => {
-        try {
-            const user = await User.findOne({ username: data.u });
-            if (user && user.balance >= data.amt && gameState.status === "PREPARING") {
-                user.balance -= data.amt;
-                await user.save();
-                activeBets.push({ u: data.u, amt: data.amt, cashed: false });
-                socket.emit('update_balance', user.balance);
-            }
-        } catch (e) {}
-    });
-
-    socket.on('cashout', async (data) => {
-        const bIndex = activeBets.findIndex(b => b.u === data.u && !b.cashed);
-        if (bIndex > -1) {
-            activeBets[bIndex].cashed = true;
-            const user = await User.findOne({ username: data.u });
-            const win = activeBets[bIndex].amt * gameState.multiplier;
-            user.balance += win;
-            await user.save();
-            socket.emit('update_balance', user.balance);
-            io.emit('player_won', { u: data.u, mult: gameState.multiplier.toFixed(2) });
-        }
-    });
-
     socket.on('admin_get_users', async () => {
         const users = await User.find({});
         socket.emit('admin_user_list', users);
@@ -134,5 +115,5 @@ io.on('connection', (socket) => {
     });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => { startRound(); });
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, () => { console.log(`Server running on port ${PORT}`); startRound(); });
