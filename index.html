@@ -10,74 +10,56 @@
         * { box-sizing: border-box; }
         body { margin: 0; background: var(--bg); color: var(--text); font-family: sans-serif; height: 100vh; overflow: hidden; display: flex; justify-content: center; }
         .app-container { width: 100%; max-width: 500px; height: 100%; position: relative; display: flex; flex-direction: column; padding-top: 60px; } 
-        
         #login-screen { height: 100%; width: 100%; display: flex; justify-content: center; align-items: center; background: radial-gradient(circle, #111125 0%, #050510 100%); padding: 20px; position: absolute; top: 0; z-index: 1000; }
         .login-box { background: var(--panel); padding: 30px; border-radius: 20px; border: 2px solid var(--neon); width: 100%; text-align: center; }
         input { width: 100%; padding: 10px; margin: 5px 0; background: #000; border: 1px solid #333; color: #fff; border-radius: 8px; }
         .btn-login { width: 100%; padding: 15px; background: var(--neon); border: none; font-weight: bold; border-radius: 8px; cursor: pointer; }
-        
         #game-screen { display: none; flex-direction: column; height: 100%; width: 100%; padding: 10px; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
         .balance-box { color: var(--green); font-weight: 900; font-size: 1.2rem; }
-        .action-btns button { background: #1a1a35; border: 1px solid var(--yellow); color: var(--yellow); padding: 4px 8px; border-radius: 5px; font-size: 0.6rem; font-weight: bold; }
-
-        #viewport { height: 210px; background: #000; border-radius: 15px; position: relative; overflow: hidden; border: 2px solid #1f1f35; margin-bottom: 5px; }
-        #multiplier { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); font-size: 4rem; font-weight: 900; z-index: 10; }
+        .action-btns button { background: #1a1a35; border: 1px solid var(--yellow); color: var(--yellow); padding: 4px 10px; border-radius: 5px; font-size: 0.7rem; font-weight: bold; }
+        #viewport { height: 230px; background: #000; border-radius: 15px; position: relative; overflow: hidden; border: 2px solid #1f1f35; margin-bottom: 5px; }
+        #multiplier { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); font-size: 4.5rem; font-weight: 900; z-index: 10; }
         #craft { position: absolute; font-size: 45px; left: 15%; bottom: 25%; z-index: 5; display: none; }
-        
-        .history-bar { display: flex; gap: 5px; height: 25px; margin-bottom: 5px; overflow-x: auto; scrollbar-width: none; }
-        .hist-item { background: #1a1a35; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; border: 1px solid #333; white-space: nowrap; }
-
-        .bet-section { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .bet-card { background: var(--panel); padding: 10px; border-radius: 12px; border-bottom: 3px solid #000; position: relative;}
-        .btn-bet { width: 100%; height: 55px; border-radius: 10px; border: none; font-weight: 900; font-size: 1rem; cursor: pointer; background: var(--green); color: #000; margin-top: 5px; }
+        .history-bar { display: flex; gap: 5px; height: 25px; margin: 5px 0; overflow-x: auto; }
+        .hist-item { background: #1a1a35; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; border: 1px solid #333; }
+        .bet-section { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .bet-card { background: var(--panel); padding: 10px; border-radius: 12px; border-bottom: 3px solid #000; }
+        .btn-bet { width: 100%; height: 55px; border-radius: 10px; border: none; font-weight: 900; font-size: 0.9rem; cursor: pointer; background: var(--green); color: #000; margin-top: 5px; }
         .btn-cash { background: var(--yellow) !important; font-size: 0.8rem !important; }
-        .btn-next { background: var(--red) !important; color: #fff; font-size: 0.8rem !important; }
+        .btn-next { background: var(--red) !important; color: #fff; font-size: 0.7rem !important; }
         .btn-waiting { background: #444 !important; color: #888; cursor: not-allowed; }
-
         .auto-row { display: flex; justify-content: space-between; font-size: 0.6rem; color: #888; margin-top: 2px; }
-        .auto-row input { width: 35px; padding: 1px; margin: 0; background: #000; border: 1px solid #444; color: var(--yellow); font-size: 0.65rem; }
-
+        .auto-row input { width: 35px; padding: 1px; background: #000; border: 1px solid #444; color: var(--yellow); }
         #sidebar { position: absolute; left: 0; top: 0; width: 220px; height: 100%; background: var(--panel); border-right: 2px solid var(--neon); z-index: 200; transition: transform 0.3s; transform: translateX(-100%); }
         #sidebar.open { transform: translateX(0); }
         #toggle-sidebar { position: absolute; right: -35px; top: 120px; background: var(--neon); color: #000; border: none; padding: 10px 5px; border-radius: 0 8px 8px 0; font-weight: bold; }
-        .p-list-box { height: calc(100% - 40px); overflow-y: auto; padding: 10px; font-size: 0.75rem; }
-        .player-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #1a1a35; }
-
+        .p-list-box { height: calc(100% - 40px); overflow-y: auto; padding: 10px; }
+        .player-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1a1a35; font-size: 0.75rem; }
         .phase-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 20; display: none; justify-content: center; align-items: center; color: var(--yellow); font-weight: bold; }
     </style>
 </head>
 <body>
 <div class="app-container">
     <div id="sidebar"><button id="toggle-sidebar" onclick="toggleLobby()">LIVE</button><div class="p-list-box" id="p-list"></div></div>
-    <div id="login-screen"><div class="login-box"><h1 style="color:var(--neon)">FLASHSPEED</h1><div style="background:#000; padding:10px; margin-bottom:15px; border:1px dashed var(--neon); font-size:0.8rem;">CONTACT AGENT: <b style="color:var(--neon)">00923426693085</b></div><input type="text" id="l-user" placeholder="Username"><input type="password" id="l-pass" placeholder="Password"><button class="btn-login" onclick="attemptLogin()">LOGIN</button></div></div>
-    
+    <div id="login-screen"><div class="login-box"><h1 style="color:var(--neon)">FLASHSPEED</h1><div style="background:#000; padding:10px; margin-bottom:15px; border:1px dashed var(--neon); font-size:0.8rem;">AGENT: <b style="color:var(--neon)">00923426693085</b></div><input type="text" id="l-user" placeholder="Username"><input type="password" id="l-pass" placeholder="Password"><button class="btn-login" onclick="attemptLogin()">LOGIN</button></div></div>
     <div id="game-screen">
         <div class="header">
             <div id="u-display" style="font-weight:900; color:var(--neon); font-size:0.7rem;">USER</div>
             <div class="balance-box">$<span id="balance">0.00</span></div>
-            <div class="action-btns"><button onclick="showC('FUND')">FUND</button><button onclick="showC('WD')">WD</button><button onclick="location.reload()">OUT</button></div>
+            <div class="action-btns"><button onclick="alert('Contact: 00923426693085')">FUND</button><button onclick="alert('Contact: 00923426693085')">WD</button><button onclick="location.reload()">OUT</button></div>
         </div>
         <div class="history-bar" id="history"></div>
         <div id="viewport"><div id="multiplier">1.00x</div><div id="craft">🚀</div><div class="phase-overlay" id="phase-ui">PREPARING...</div></div>
-        
         <div class="bet-section">
-            <!-- Bet Panel 1 -->
             <div class="bet-card">
-                <input type="number" id="amt-1" value="10" style="padding:4px; font-size:0.8rem;">
-                <div class="auto-row">
-                    <label><input type="checkbox" id="auto-bet-1"> Auto</label>
-                    <label>X <input type="number" id="auto-cash-1" value="2.00" step="0.1"></label>
-                </div>
+                <input type="number" id="amt-1" value="10">
+                <div class="auto-row"><label><input type="checkbox" id="auto-bet-1"> Auto</label><label>X <input type="number" id="auto-cash-1" value="2.00" step="0.1"></label></div>
                 <button id="btn-1" class="btn-bet" onclick="handleBet(1)">BET</button>
             </div>
-            <!-- Bet Panel 2 -->
             <div class="bet-card">
-                <input type="number" id="amt-2" value="10" style="padding:4px; font-size:0.8rem;">
-                <div class="auto-row">
-                    <label><input type="checkbox" id="auto-bet-2"> Auto</label>
-                    <label>X <input type="number" id="auto-cash-2" value="2.00" step="0.1"></label>
-                </div>
+                <input type="number" id="amt-2" value="10">
+                <div class="auto-row"><label><input type="checkbox" id="auto-bet-2"> Auto</label><label>X <input type="number" id="auto-cash-2" value="2.00" step="0.1"></label></div>
                 <button id="btn-2" class="btn-bet" onclick="handleBet(2)">BET</button>
             </div>
         </div>
@@ -85,14 +67,11 @@
 </div>
 <script>
     const socket = io({ transports: ["websocket"] });
-    let user = null, wallet = 0, currentMultiplier = 1.00, gameStatus = "PREPARING";
-    let myBets = { 
-        1: { active: false, queued: false, amt: 0 }, 
-        2: { active: false, queued: false, amt: 0 } 
-    };
+    let user = null, wallet = 0, multiplier = 1.00, gameStatus = "PREPARING";
+    let myBets = { 1: { active: false, queued: false, amt: 0 }, 2: { active: false, queued: false, amt: 0 } };
+    let currentFakes = [];
 
     function toggleLobby() { document.getElementById('sidebar').classList.toggle('open'); }
-    function showC(t) { alert("Contact WhatsApp: 00923426693085"); }
     function attemptLogin() { socket.emit('login', { u: document.getElementById('l-user').value, p: document.getElementById('l-pass').value }); }
     
     socket.on('login_success', (data) => { 
@@ -107,15 +86,14 @@
     socket.on('login_error', (msg) => alert(msg));
 
     socket.on('tick', (m) => { 
-        currentMultiplier = parseFloat(m);
+        multiplier = parseFloat(m);
         document.getElementById('multiplier').innerText = m + "x";
         for(let i=1; i<=2; i++) {
             if(myBets[i].active && gameStatus === "FLYING") {
-                const liveWin = (myBets[i].amt * currentMultiplier).toFixed(2);
+                const liveWin = (myBets[i].amt * multiplier).toFixed(2);
                 document.getElementById(`btn-${i}`).innerText = `CASH OUT\n$${liveWin}`;
                 // Auto Cashout
-                let autoVal = parseFloat(document.getElementById(`auto-cash-${i}`).value);
-                if(currentMultiplier >= autoVal) handleBet(i);
+                if(multiplier >= parseFloat(document.getElementById(`auto-cash-${i}`).value)) handleBet(i);
             }
         }
     });
@@ -127,18 +105,13 @@
             phase.style.display = 'flex'; document.getElementById('craft').style.display = 'none';
             document.getElementById('multiplier').style.color = "#fff";
             for(let i=1; i<=2; i++) {
-                if(myBets[i].queued) { 
-                    myBets[i].queued = false; myBets[i].active = true; 
-                    updateButtonUI(i, "WAITING"); 
-                } else if(document.getElementById(`auto-bet-${i}`).checked) {
-                    handleBet(i);
-                } else {
-                    resetButton(i);
-                }
+                if(myBets[i].queued) { myBets[i].queued = false; myBets[i].active = true; updateUI(i, "WAITING"); } 
+                else if(document.getElementById(`auto-bet-${i}`).checked) { handleBet(i); }
+                else resetButton(i);
             }
         } else {
             phase.style.display = 'none'; document.getElementById('craft').style.display = 'block';
-            for(let i=1; i<=2; i++) if(myBets[i].active) updateButtonUI(i, "CASH OUT");
+            for(let i=1; i<=2; i++) if(myBets[i].active) updateUI(i, "CASH OUT");
         }
     });
 
@@ -150,45 +123,29 @@
         for(let i=1; i<=2; i++) if(myBets[i].active) resetButton(i);
     });
 
-    socket.on('cashout_confirmed', (data) => {
-        // Find which bet to clear (usually we clear both if only one cashout is emitted, but we'll try to be specific)
-        // For simplicity, handleBet calls clear it immediately on click, server confirmation just updates wallet
-    });
-
+    socket.on('cashout_confirmed', (data) => { /* wallet updated via update_balance */ });
     socket.on('update_balance', (b) => { wallet = b; document.getElementById('balance').innerText = wallet.toFixed(2); });
 
     function handleBet(n) {
         const amt = parseFloat(document.getElementById(`amt-${n}`).value);
-        const btn = document.getElementById(`btn-${n}`);
-
         if(!myBets[n].active && !myBets[n].queued) {
-            // Placing new bet
-            if(amt > wallet || amt <= 0) return;
+            if(amt > wallet || amt <= 0) return alert("Low Funds");
             socket.emit('place_bet', { u: user, amt: amt });
             myBets[n].amt = amt;
-            if(gameStatus === "FLYING") {
-                myBets[n].queued = true;
-                updateButtonUI(n, "NEXT ROUND");
-            } else {
-                myBets[n].active = true;
-                updateButtonUI(n, "WAITING");
-            }
+            if(gameStatus === "FLYING") { myBets[n].queued = true; updateUI(n, "NEXT ROUND"); }
+            else { myBets[n].active = true; updateUI(n, "WAITING"); }
         } else if(myBets[n].active && gameStatus === "FLYING") {
-            // Cashing out
-            socket.emit('cashout', { u: user });
+            socket.emit('cashout_request', { u: user });
             myBets[n].active = false;
-            // IMMEDIATELY let them bet again for next round
-            updateButtonUI(n, "IDLE"); 
+            resetButton(n); // Immediately turn back to BET button
         }
     }
 
-    function updateButtonUI(n, state) {
+    function updateUI(n, state) {
         const btn = document.getElementById(`btn-${n}`);
-        btn.disabled = false;
         if(state === "WAITING") { btn.innerText = "WAITING..."; btn.style.background = "#444"; }
         if(state === "CASH OUT") { btn.classList.add('btn-cash'); }
         if(state === "NEXT ROUND") { btn.innerText = "NEXT ROUND"; btn.classList.add('btn-next'); }
-        if(state === "IDLE") { resetButton(n); }
     }
 
     function resetButton(i) {
@@ -197,10 +154,25 @@
         myBets[i].active = false; myBets[i].queued = false;
     }
 
-    socket.on('fake_cashout', (data) => {
+    // --- FAKE PLAYER LOGIC ---
+    socket.on('fake_round_start', (players) => {
+        currentFakes = players;
         const list = document.getElementById('p-list');
-        list.insertAdjacentHTML('afterbegin', `<div class="player-row"><span>👤 ${data.name}</span> <span style="color:var(--green)">${data.mult}x ($${data.win})</span></div>`);
-        if(list.children.length > 20) list.lastChild.remove();
+        list.innerHTML = "";
+        players.forEach(p => {
+            list.insertAdjacentHTML('beforeend', `<div class="player-row" id="fake-${p.name}"><span>👤 ${p.name}</span> <span id="val-${p.name}">$${p.amt}</span></div>`);
+        });
+    });
+
+    socket.on('fake_cashout_event', (data) => {
+        if(currentFakes.length > 0) {
+            const player = currentFakes.pop();
+            const el = document.getElementById(`val-${player.name}`);
+            if(el) {
+                el.innerText = data.mult + "x";
+                el.style.color = "var(--green)";
+            }
+        }
     });
 
     function updateHistory(list) {
