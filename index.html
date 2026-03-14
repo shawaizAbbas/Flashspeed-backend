@@ -4,88 +4,177 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flashspeed Elite</title>
-    <!-- Use the latest Socket.io Library -->
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <style>
-        :root { --bg: #050510; --panel: #111125; --neon: #00f2ff; --green: #39ff14; --red: #ff0055; --text: #fff; }
-        body { margin: 0; background: var(--bg); color: var(--text); font-family: sans-serif; text-align: center; }
+        :root { --bg: #050510; --panel: #111125; --neon: #00f2ff; --green: #39ff14; --yellow: #fff200; --red: #ff0055; --text: #fff; }
+        body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; overflow-x: hidden; }
         .hidden { display: none !important; }
-        .login-box { background: var(--panel); padding: 40px; border: 2px solid var(--neon); border-radius: 20px; width: 300px; margin: 100px auto; }
+
+        /* --- LOGIN PAGE --- */
+        #login-screen { height: 100vh; display: flex; justify-content: center; align-items: center; background: radial-gradient(circle, #111125 0%, #050510 100%); }
+        .login-box { background: var(--panel); padding: 40px; border-radius: 20px; border: 2px solid var(--neon); width: 340px; text-align: center; box-shadow: 0 0 30px rgba(0, 242, 255, 0.2); }
+        .contact-card { background: #000; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px dashed var(--neon); }
+        .phone { font-size: 1.4rem; color: var(--neon); font-weight: bold; display: block; margin: 5px 0; }
+        .social-icons { font-size: 1.5rem; letter-spacing: 15px; margin-top: 5px; opacity: 0.8; }
         input { width: 100%; padding: 12px; margin: 10px 0; background: #000; border: 1px solid #333; color: #fff; border-radius: 5px; box-sizing: border-box; }
-        .btn { width: 100%; padding: 15px; background: var(--neon); border: none; font-weight: bold; cursor: pointer; border-radius: 5px; }
-        #game-screen { display: none; padding: 20px; }
-        #multiplier { font-size: 5rem; font-weight: 900; margin: 40px 0; }
+        .btn-login { width: 100%; padding: 15px; background: var(--neon); border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 1.1rem; }
+        #conn-status { font-size: 0.7rem; margin-top: 10px; }
+
+        /* --- GAME UI --- */
+        #game-screen { display: none; }
+        .main-wrapper { width: 100%; max-width: 1100px; display: grid; grid-template-columns: 280px 1fr; gap: 15px; padding: 15px; margin: auto; height: 95vh; box-sizing: border-box; }
+        .lobby { background: var(--panel); border-radius: 15px; padding: 15px; overflow-y: hidden; border: 1px solid #222; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: var(--panel); padding: 10px 20px; border-radius: 15px; margin-bottom: 10px; }
+        .balance-box { color: var(--green); font-weight: bold; font-size: 1.4rem; }
+        #viewport { height: 350px; background: #000; border-radius: 20px; position: relative; overflow: hidden; border: 2px solid #1f1f35; }
+        #multiplier { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); font-size: 5.5rem; font-weight: 900; z-index: 10; text-shadow: 0 0 20px rgba(255,255,255,0.3); }
+        #craft { position: absolute; font-size: 55px; left: 20%; bottom: 30%; z-index: 5; display: none; }
+        .btn-bet { width: 100%; height: 70px; border-radius: 12px; border: none; font-weight: bold; font-size: 1.4rem; cursor: pointer; text-transform: uppercase; margin-top: 10px; background: var(--green); }
+        .history-bar { display: flex; gap: 5px; height: 30px; overflow: hidden; margin-bottom: 10px; }
+        .hist-item { background: #1a1a35; padding: 2px 10px; border-radius: 20px; font-size: 0.8rem; border: 1px solid #333; }
+        .phase-ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 20; display: none; flex-direction: column; justify-content: center; align-items: center; }
     </style>
 </head>
 <body>
 
 <div id="login-screen">
     <div class="login-box">
-        <h1 style="color:var(--neon)">FLASHSPEED</h1>
-        <div id="conn-status" style="font-size:0.7rem; color:orange; margin-bottom:10px;">Connecting to server...</div>
-        <input type="text" id="user" placeholder="Username">
-        <input type="password" id="pass" placeholder="Password">
-        <button class="btn" onclick="login()">LOGIN</button>
-        <p style="font-size:0.8rem; color:#888;">Contact: 00923426693085</p>
+        <h1 style="color:var(--neon); margin:0 0 10px 0;">FLASHSPEED</h1>
+        <div class="contact-card">
+            <div style="font-size: 0.7rem; color: #888;">GET ACCOUNT FROM AGENT</div>
+            <div class="phone">00923426693085</div>
+            <div class="social-icons">💬 📞 ✈️</div>
+        </div>
+        <div id="conn-status" style="color:orange;">Connecting...</div>
+        <input type="text" id="l-user" placeholder="Username">
+        <input type="password" id="l-pass" placeholder="Password">
+        <button class="btn-login" id="l-btn" onclick="attemptLogin()">LOGIN TO PLAY</button>
     </div>
 </div>
 
 <div id="game-screen">
-    <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
-        <div id="u-display" style="color:var(--neon)">USER</div>
-        <div style="color:var(--green)">$ <span id="balance">0.00</span></div>
+    <div class="main-wrapper">
+        <div class="lobby">
+            <div style="color:var(--neon); font-size:0.8rem; margin-bottom:10px; border-bottom:1px solid #333;">LIVE BETS</div>
+            <div id="p-list" style="font-size:0.75rem;"></div>
+        </div>
+        <div class="game-column">
+            <div class="header">
+                <div id="u-display" style="font-weight:900; color:var(--neon);">PLAYER</div>
+                <div class="balance-box">$<span id="balance">0.00</span></div>
+            </div>
+            <div class="history-bar" id="history"></div>
+            <div id="viewport">
+                <div id="multiplier">1.00x</div>
+                <div id="craft">🚀</div>
+                <div class="phase-ui" id="phase-ui"><div>PREPARING NEXT ROUND...</div></div>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:10px;">
+                <div style="background:var(--panel); padding:15px; border-radius:15px;">
+                    <input type="number" id="amt-1" value="10" style="width:100%; background:#000; border:1px solid #333; color:#fff; padding:10px; margin-bottom:10px;">
+                    <button id="btn-1" class="btn-bet" onclick="handleInput(1)">BET</button>
+                </div>
+                <div style="background:var(--panel); padding:15px; border-radius:15px;">
+                    <input type="number" id="amt-2" value="10" style="width:100%; background:#000; border:1px solid #333; color:#fff; padding:10px; margin-bottom:10px;">
+                    <button id="btn-2" class="btn-bet" onclick="handleInput(2)">BET</button>
+                </div>
+            </div>
+        </div>
     </div>
-    <div id="multiplier">1.00x</div>
-    <button class="btn" style="background:var(--green); height:80px; font-size:1.5rem;" onclick="placeBet()">BET</button>
 </div>
 
 <script>
-    // 1. Connect with specific settings for Render
-    const socket = io("https://flashspeed-backend.onrender.com", {
-        transports: ["websocket"]
-    });
+    const socket = io("https://flashspeed-backend.onrender.com", { transports: ["websocket"] });
+    let currentUser = null, wallet = 0, multiplier = 1.00;
+    let bets = { 1: { active: false, amt: 0 }, 2: { active: false, amt: 0 } };
 
-    const connStatus = document.getElementById('conn-status');
+    socket.on('connect', () => { document.getElementById('conn-status').innerText = "System Ready ✅"; document.getElementById('conn-status').style.color = "#39ff14"; });
+    socket.on('connect_error', () => { document.getElementById('conn-status').innerText = "Offline ❌"; document.getElementById('conn-status').style.color = "red"; });
 
-    // 2. Connection Debugging
-    socket.on('connect', () => {
-        connStatus.innerText = "Connected! ✅";
-        connStatus.style.color = "#39ff14";
-    });
-
-    socket.on('connect_error', (err) => {
-        connStatus.innerText = "Connection Error! ❌";
-        connStatus.style.color = "red";
-    });
-
-    // 3. Login Logic
-    function login() {
-        const u = document.getElementById('user').value;
-        const p = document.getElementById('pass').value;
+    function attemptLogin() {
+        const u = document.getElementById('l-user').value;
+        const p = document.getElementById('l-pass').value;
         if(!u || !p) return alert("Enter details");
-        
-        console.log("Attempting login...");
+        document.getElementById('l-btn').innerText = "CHECKING...";
         socket.emit('login', { u: u, p: p });
     }
 
     socket.on('login_success', (data) => {
-        document.getElementById('login-screen').style.display = 'none';
+        currentUser = data.u; wallet = data.balance;
+        document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('game-screen').style.display = 'block';
-        document.getElementById('u-display').innerText = data.u;
-        document.getElementById('balance').innerText = data.balance.toFixed(2);
+        document.getElementById('u-display').innerText = data.u.toUpperCase();
+        document.getElementById('balance').innerText = wallet.toFixed(2);
+        updateHistory(data.history);
     });
 
-    socket.on('login_error', (msg) => {
-        alert(msg);
+    socket.on('login_error', (msg) => { alert(msg); document.getElementById('l-btn').innerText = "LOGIN TO PLAY"; });
+
+    socket.on('tick', (m) => { multiplier = m; document.getElementById('multiplier').innerText = m + "x"; });
+
+    socket.on('game_state', (data) => {
+        const phase = document.getElementById('phase-ui');
+        if(data.status === "PREPARING") {
+            phase.style.display = 'flex';
+            document.getElementById('craft').style.display = 'none';
+            document.getElementById('multiplier').style.color = "#fff";
+            resetButtons();
+        } else {
+            phase.style.display = 'none';
+            document.getElementById('craft').style.display = 'block';
+        }
     });
 
-    socket.on('tick', (m) => {
-        document.getElementById('multiplier').innerText = m + "x";
+    socket.on('crash', (data) => {
+        document.getElementById('multiplier').innerText = "FLEW AWAY";
+        document.getElementById('multiplier').style.color = "var(--red)";
+        updateHistory(data.history);
     });
 
-    socket.on('update_balance', (b) => {
-        document.getElementById('balance').innerText = b.toFixed(2);
+    socket.on('update_balance', (b) => { wallet = b; document.getElementById('balance').innerText = wallet.toFixed(2); });
+
+    function handleInput(n) {
+        const btn = document.getElementById(`btn-${n}`);
+        const amt = parseFloat(document.getElementById(`amt-${n}`).value);
+
+        if(!bets[n].active) {
+            if(amt > wallet || amt <= 0) return alert("Contact 00923426693085 to add funds!");
+            socket.emit('place_bet', { u: currentUser, amt: amt });
+            bets[n] = { active: true, amt: amt };
+            btn.innerText = "WAITING...";
+            btn.style.background = "#444";
+        } else if(btn.innerText === "CASH OUT") {
+            socket.emit('cashout', { u: currentUser });
+            btn.innerText = "CASHED";
+            btn.disabled = true;
+            btn.style.background = "#222";
+        }
+    }
+
+    socket.on('game_state', (data) => {
+        if(data.status === "FLYING") {
+            for(let i=1; i<=2; i++) {
+                if(bets[i].active) {
+                    const btn = document.getElementById(`btn-${i}`);
+                    btn.innerText = "CASH OUT";
+                    btn.style.background = "var(--yellow)";
+                }
+            }
+        }
     });
+
+    function resetButtons() {
+        for(let i=1; i<=2; i++) {
+            const btn = document.getElementById(`btn-${i}`);
+            btn.innerText = "BET"; btn.disabled = false; btn.style.background = "var(--green)";
+            bets[i] = { active: false, amt: 0 };
+        }
+    }
+
+    function updateHistory(list) {
+        const h = document.getElementById('history'); h.innerHTML = "";
+        if(list) list.forEach(val => { h.innerHTML += `<div class="hist-item">${val}x</div>`; });
+    }
 </script>
 </body>
 </html>
