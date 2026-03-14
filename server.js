@@ -31,24 +31,19 @@ const User = mongoose.model('User', UserSchema);
 
 let gameState = { multiplier: 1.00, crashPoint: 0, status: "PREPARING", history: [] };
 let activeBets = [];
-let queuedBets = []; // For people betting while the rocket is flying
+let queuedBets = [];
 let manualCrashTriggered = false;
 
 function startRound() {
     gameState.status = "PREPARING";
     gameState.multiplier = 1.00;
     manualCrashTriggered = false;
-    
-    // Move queued bets to active bets
     activeBets = [...queuedBets];
     queuedBets = [];
-    
     gameState.crashPoint = (0.99 / (1 - Math.random())).toFixed(2);
     if (gameState.crashPoint < 1.01) gameState.crashPoint = 1.01;
-    
     io.emit('game_state', { status: "PREPARING", history: gameState.history });
     io.emit('admin_update_bets', activeBets);
-
     setTimeout(() => {
         gameState.status = "FLYING";
         io.emit('game_state', { status: "FLYING" });
@@ -60,15 +55,6 @@ function runFlightLoop() {
     let loop = setInterval(() => {
         gameState.multiplier += (gameState.multiplier * 0.005) + 0.01;
         io.emit('tick', gameState.multiplier.toFixed(2));
-
-        if(Math.random() < 0.05) {
-            const names = ["Ahmed", "Ali", "Zain", "Lucas", "Musa", "Sara"];
-            io.emit('fake_cashout', { 
-                name: names[Math.floor(Math.random()*names.length)], 
-                mult: gameState.multiplier.toFixed(2),
-                win: (Math.random() * 100).toFixed(2)
-            });
-        }
 
         if (gameState.multiplier >= gameState.crashPoint || manualCrashTriggered) {
             clearInterval(loop);
@@ -84,11 +70,10 @@ function runFlightLoop() {
 
 io.on('connection', (socket) => {
     socket.on('login', async (data) => {
-        if (!isDbConnected) return;
-        const user = await User.findOne({ username: data.u.trim() });
-        if (!user) return socket.emit('login_error', "Username not found!");
-        if (user.password !== data.p) return socket.emit('login_error', "Wrong Password!");
-        if (user.isBlocked) return socket.emit('login_error', "Account BLOCKED!");
+        const user = await User.findOne({ username: data.u.trim().toLowerCase() });
+        if (!user) return socket.emit('login_error', "User not found");
+        if (user.password !== data.p) return socket.emit('login_error', "Wrong Password");
+        if (user.isBlocked) return socket.emit('login_error', "Blocked");
         socket.join(user.username);
         socket.emit('login_success', { u: user.username, balance: user.balance, history: gameState.history });
     });
@@ -99,14 +84,10 @@ io.on('connection', (socket) => {
             user.balance -= data.amt;
             await user.save();
             const betObj = { u: data.u, amt: data.amt, cashed: false };
-            
-            if(gameState.status === "PREPARING") {
-                activeBets.push(betObj);
-                io.emit('admin_update_bets', activeBets);
-            } else {
-                queuedBets.push(betObj);
-            }
+            if(gameState.status === "PREPARING") activeBets.push(betObj);
+            else queuedBets.push(betObj);
             socket.emit('update_balance', user.balance);
+            io.emit('admin_update_bets', activeBets);
         }
     });
 
@@ -123,47 +104,39 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('admin_crash_now', () => { manualCrashTriggered = true; });
-    
     socket.on('admin_get_users', async () => {
         const users = await User.find({});
         socket.emit('admin_user_list', users);
-        socket.emit('admin_update_bets', activeBets);
     });
 
     socket.on('admin_create_user', async (data) => {
-        try { await User.create({ username: data.u.trim(), password: data.p, balance: 0 }); 
-        const users = await User.find({}); io.emit('admin_user_list', users); } catch (e) { console.log("Create fail"); }
+        try { await User.create({ username: data.u.trim().toLowerCase(), password: data.p, balance: 0 }); 
+        const users = await User.find({}); socket.emit('admin_user_list', users); } catch(e){}
     });
 
-    socket.on('admin_set_balance', async (data) => {
+    socket.on('admin_adjust_balance', async (data) => {
         const user = await User.findOne({ username: data.u });
         if (user) {
-            user.balance = parseFloat(data.amt);
+            if(data.type === 'add') user.balance += parseFloat(data.amt);
+            else user.balance -= parseFloat(data.amt);
             await user.save();
-            io.to(data.u).emit('update_balance', user.balance);
-            const users = await User.find({});
-            io.emit('admin_user_list', users);
-        }
-    });
-
-    socket.on('admin_block_user', async (u) => {
-        const user = await User.findOne({ username: u });
-        if (user) {
-            user.isBlocked = !user.isBlocked;
-            await user.save();
-            if(user.isBlocked) io.to(u).emit('login_error', "Blocked by Admin");
-            const users = await User.find({});
-            io.emit('admin_user_list', users);
+            io.to(user.username).emit('update_balance', user.balance);
+            const users = await User.find({}); socket.emit('admin_user_list', users);
         }
     });
 
     socket.on('admin_delete_user', async (u) => {
-        console.log("Deleting user: " + u);
         await User.deleteOne({ username: u });
-        const users = await User.find({});
-        io.emit('admin_user_list', users); // This refreshes your list
+        const users = await User.find({}); socket.emit('admin_user_list', users);
     });
+
+    socket.on('admin_block_user', async (u) => {
+        const user = await User.findOne({ username: u });
+        if(user) { user.isBlocked = !user.isBlocked; await user.save(); 
+        const users = await User.find({}); socket.emit('admin_user_list', users); }
+    });
+
+    socket.on('admin_crash_now', () => { manualCrashTriggered = true; });
 });
 
 const PORT = process.env.PORT || 10000;
