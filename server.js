@@ -9,19 +9,17 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// --- FORCE SERVE FILES ---
-// This tells the server exactly where to find your files
+// This tells the server to look in the main folder for your HTML files
 app.use(express.static(path.join(__dirname)));
 
-// If you visit the main link, show index.html
+// Route for Player
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// If you visit /admin, show the admin file
-// CHANGE 'control_00923426693085.html' to whatever your file is named!
+// Route for Admin (MATCHES YOUR GITHUB FILENAME EXACTLY)
 app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, 'control_00923426693085.html'));
+    res.sendFile(path.join(__dirname, 'control_923426693085.html'));
 });
 
 const server = http.createServer(app);
