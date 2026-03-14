@@ -1,7 +1,6 @@
 {
-  "name": "flashspeed-backend",
+  "name": "flashspeed",
   "version": "1.0.0",
-  "description": "Flashspeed Elite Crash Game Engine",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -10,12 +9,6 @@
     "express": "^4.18.2",
     "socket.io": "^4.7.2",
     "mongoose": "^7.0.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.0.3"
-  },
-  "engines": {
-    "node": ">=14.0.0"
-  },
-  "author": "Flashspeed",
-  "license": "ISC"
+    "cors": "^2.8.5"
+  }
 }
