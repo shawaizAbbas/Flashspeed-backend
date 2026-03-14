@@ -1,136 +1,147 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Flashspeed Elite</title>
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-    <style>
-        :root { --bg: #050510; --panel: #111125; --neon: #00f2ff; --green: #39ff14; --yellow: #fff200; --red: #ff0055; --text: #fff; }
-        * { box-sizing: border-box; }
-        body { margin: 0; background: var(--bg); color: var(--text); font-family: sans-serif; height: 100vh; overflow: hidden; display: flex; justify-content: center; }
-        .app-container { width: 100%; max-width: 500px; height: 100%; position: relative; display: flex; flex-direction: column; padding-top: 50px; } 
-        #login-screen { height: 100%; width: 100%; display: flex; justify-content: center; align-items: center; background: radial-gradient(circle, #111125 0%, #050510 100%); padding: 20px; position: absolute; top: 0; z-index: 1000; }
-        .login-box { background: var(--panel); padding: 30px; border-radius: 20px; border: 2px solid var(--neon); width: 100%; text-align: center; }
-        input { width: 100%; padding: 10px; margin: 5px 0; background: #000; border: 1px solid #333; color: #fff; border-radius: 8px; }
-        .btn-login { width: 100%; padding: 15px; background: var(--neon); border: none; font-weight: bold; border-radius: 8px; cursor: pointer; }
-        #game-screen { display: none; flex-direction: column; height: 100%; width: 100%; padding: 15px; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .balance-box { color: var(--green); font-weight: 900; font-size: 1.2rem; }
-        .action-btns button { background: #1a1a35; border: 1px solid var(--yellow); color: var(--yellow); padding: 5px 8px; border-radius: 5px; font-size: 0.65rem; font-weight: bold; margin-left:2px; }
-        #viewport { height: 220px; background: #000; border-radius: 15px; position: relative; overflow: hidden; border: 2px solid #1f1f35; }
-        #multiplier { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); font-size: 4rem; font-weight: 900; z-index: 10; }
-        #craft { position: absolute; font-size: 45px; left: 15%; bottom: 25%; z-index: 5; display: none; }
-        .history-bar { display: flex; gap: 5px; height: 25px; margin: 8px 0; overflow-x: auto; }
-        .hist-item { background: #1a1a35; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; border: 1px solid #333; }
-        .bet-section { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .bet-card { background: var(--panel); padding: 10px; border-radius: 12px; border-bottom: 3px solid #000; }
-        .btn-bet { width: 100%; height: 50px; border-radius: 10px; border: none; font-weight: 900; font-size: 0.9rem; cursor: pointer; background: var(--green); color: #000; margin-top: 5px; }
-        .auto-controls { display: flex; justify-content: space-between; align-items: center; font-size: 0.65rem; color: #888; margin-top: 5px; }
-        .auto-controls input { width: 40px; padding: 2px; margin: 0; background: #000; border: 1px solid #444; color: var(--yellow); font-size: 0.7rem; text-align: center; }
-        .btn-cash { background: var(--yellow) !important; }
-        .btn-next { background: var(--red) !important; color: #fff; }
-        .phase-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 20; display: none; justify-content: center; align-items: center; color: var(--yellow); font-weight: bold; }
-    </style>
-</head>
-<body>
-<div class="app-container">
-    <div id="login-screen"><div class="login-box"><h1 style="color:var(--neon)">FLASHSPEED</h1><div style="background:#000; padding:10px; margin-bottom:15px; border:1px dashed var(--neon); font-size:0.8rem;">CONTACT AGENT: <b style="color:var(--neon)">00923426693085</b></div><input type="text" id="l-user" placeholder="Username"><input type="password" id="l-pass" placeholder="Password"><button class="btn-login" onclick="attemptLogin()">LOGIN</button></div></div>
-    <div id="game-screen">
-        <div class="header">
-            <div id="u-display" style="font-weight:900; color:var(--neon); font-size:0.7rem;">USER</div>
-            <div class="balance-box">$<span id="balance">0.00</span></div>
-            <div class="action-btns"><button onclick="showContact('FUND')">FUND</button><button onclick="showContact('WD')">WD</button><button onclick="location.reload()" style="border-color:var(--red); color:var(--red)">LOGOUT</button></div>
-        </div>
-        <div class="history-bar" id="history"></div>
-        <div id="viewport"><div id="multiplier">1.00x</div><div id="craft">🚀</div><div class="phase-overlay" id="phase-ui">PREPARING...</div></div>
-        <div class="bet-section">
-            <!-- Bet Panel 1 -->
-            <div class="bet-card">
-                <input type="number" id="amt-1" value="10">
-                <div class="auto-controls">
-                    <label><input type="checkbox" id="auto-bet-1"> Auto</label>
-                    <label>X <input type="number" id="auto-cash-1" value="2.00" step="0.1"></label>
-                </div>
-                <button id="btn-1" class="btn-bet" onclick="handleBet(1)">BET</button>
-            </div>
-            <!-- Bet Panel 2 -->
-            <div class="bet-card">
-                <input type="number" id="amt-2" value="10">
-                <div class="auto-controls">
-                    <label><input type="checkbox" id="auto-bet-2"> Auto</label>
-                    <label>X <input type="number" id="auto-cash-2" value="2.00" step="0.1"></label>
-                </div>
-                <button id="btn-2" class="btn-bet" onclick="handleBet(2)">BET</button>
-            </div>
-        </div>
-    </div>
-</div>
-<script>
-    const socket = io({ transports: ["websocket"] });
-    let user = null, wallet = 0, currentMultiplier = 1.00, gameStatus = "PREPARING";
-    let bets = { 1: { active: false, queued: false, amt: 0 }, 2: { active: false, queued: false, amt: 0 } };
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const path = require('path');
 
-    function attemptLogin() { socket.emit('login', { u: document.getElementById('l-user').value, p: document.getElementById('l-pass').value }); }
-    socket.on('login_success', (data) => { user = data.u; wallet = data.balance; document.getElementById('login-screen').style.display = 'none'; document.getElementById('game-screen').style.display = 'flex'; document.getElementById('u-display').innerText = user.toUpperCase(); document.getElementById('balance').innerText = wallet.toFixed(2); updateHistory(data.history); });
-    socket.on('login_error', (msg) => alert(msg));
+const app = express();
+app.use(cors());
+app.use(express.json());
+const directory = path.resolve();
+app.use(express.static(directory));
+
+app.get('/', (req, res) => { res.sendFile(path.join(directory, 'index.html')); });
+app.get('/admin', (req, res) => { res.sendFile(path.join(directory, 'control_923426693085.html')); });
+
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: "*", methods: ["GET", "POST"] } });
+
+const mongoURI = process.env.MONGO_URI; 
+let isDbConnected = false;
+mongoose.connect(mongoURI).then(() => { isDbConnected = true; console.log("✅ DB Connected"); }).catch(err => console.log("❌ DB Error"));
+
+const UserSchema = new mongoose.Schema({
+    username: { type: String, unique: true, required: true },
+    password: { type: String, required: true },
+    balance: { type: Number, default: 0 },
+    isBlocked: { type: Boolean, default: false }
+});
+const User = mongoose.model('User', UserSchema);
+
+let gameState = { multiplier: 1.00, crashPoint: 0, status: "PREPARING", history: [] };
+let activeBets = [];
+let queuedBets = [];
+let manualCrashTriggered = false;
+
+function startRound() {
+    gameState.status = "PREPARING";
+    gameState.multiplier = 1.00;
+    manualCrashTriggered = false;
     
-    socket.on('tick', (m) => { 
-        currentMultiplier = parseFloat(m);
-        document.getElementById('multiplier').innerText = m + "x";
-        for(let i=1; i<=2; i++) {
-            if(bets[i].active && gameStatus === "FLYING") {
-                document.getElementById(`btn-${i}`).innerText = `CASH OUT\n$${(bets[i].amt * currentMultiplier).toFixed(2)}`;
-                // Auto Cashout Logic
-                let autoVal = parseFloat(document.getElementById(`auto-cash-${i}`).value);
-                if(currentMultiplier >= autoVal) handleBet(i); 
-            }
+    // Transfer queued bets to active bets
+    activeBets = [...queuedBets];
+    queuedBets = [];
+    
+    gameState.crashPoint = (0.99 / (1 - Math.random())).toFixed(2);
+    if (gameState.crashPoint < 1.01) gameState.crashPoint = 1.01;
+    
+    io.emit('game_state', { status: "PREPARING", history: gameState.history });
+    io.emit('admin_update_bets', activeBets);
+    setTimeout(() => {
+        gameState.status = "FLYING";
+        io.emit('game_state', { status: "FLYING" });
+        runFlightLoop();
+    }, 5000);
+}
+
+function runFlightLoop() {
+    let loop = setInterval(() => {
+        gameState.multiplier += (gameState.multiplier * 0.005) + 0.01;
+        io.emit('tick', gameState.multiplier.toFixed(2));
+
+        // Random Fake Player Logic (Frequent)
+        if(Math.random() < 0.15) {
+            const names = ["Ahmed", "Ali", "Zain", "Lucas", "Musa", "Sara", "John", "Elena"];
+            io.emit('fake_cashout', { 
+                name: names[Math.floor(Math.random()*names.length)], 
+                mult: gameState.multiplier.toFixed(2),
+                win: (Math.random() * 50 * gameState.multiplier).toFixed(2)
+            });
+        }
+
+        if (gameState.multiplier >= gameState.crashPoint || manualCrashTriggered) {
+            clearInterval(loop);
+            gameState.status = "CRASHED";
+            gameState.history.unshift(gameState.multiplier.toFixed(2));
+            if (gameState.history.length > 15) gameState.history.pop();
+            io.emit('crash', { point: gameState.multiplier.toFixed(2), history: gameState.history });
+            activeBets = [];
+            setTimeout(startRound, 3000);
+        }
+    }, 100);
+}
+
+io.on('connection', (socket) => {
+    socket.on('login', async (data) => {
+        const user = await User.findOne({ username: data.u.trim().toLowerCase() });
+        if (!user) return socket.emit('login_error', "User not found");
+        if (user.password !== data.p) return socket.emit('login_error', "Wrong Password");
+        if (user.isBlocked) return socket.emit('login_error', "Blocked");
+        socket.join(user.username);
+        socket.emit('login_success', { u: user.username, balance: user.balance, history: gameState.history });
+    });
+
+    socket.on('place_bet', async (data) => {
+        const user = await User.findOne({ username: data.u });
+        if (user && user.balance >= data.amt && !user.isBlocked) {
+            user.balance -= data.amt;
+            await user.save();
+            const betObj = { u: data.u, amt: data.amt, cashed: false };
+            if(gameState.status === "PREPARING") activeBets.push(betObj);
+            else queuedBets.push(betObj);
+            socket.emit('update_balance', user.balance);
+            io.emit('admin_update_bets', activeBets);
         }
     });
 
-    socket.on('game_state', (data) => {
-        gameStatus = data.status;
-        const phase = document.getElementById('phase-ui');
-        if(data.status === "PREPARING") {
-            phase.style.display = 'flex'; document.getElementById('craft').style.display = 'none'; document.getElementById('multiplier').style.color = "#fff";
-            for(let i=1; i<=2; i++) {
-                if(bets[i].queued) { bets[i].queued = false; bets[i].active = true; updateButtonUI(i, "WAITING"); } 
-                else if(document.getElementById(`auto-bet-${i}`).checked) { handleBet(i); }
-                else { resetButton(i); }
-            }
-        } else {
-            phase.style.display = 'none'; document.getElementById('craft').style.display = 'block';
-            for(let i=1; i<=2; i++) if(bets[i].active) updateButtonUI(i, "CASH OUT");
+    socket.on('cashout', async (data) => {
+        const bIndex = activeBets.findIndex(b => b.u === data.u && !b.cashed);
+        if (bIndex > -1 && gameState.status === "FLYING") {
+            activeBets[bIndex].cashed = true;
+            const user = await User.findOne({ username: data.u });
+            const win = activeBets[bIndex].amt * gameState.multiplier;
+            user.balance += win;
+            await user.save();
+            socket.emit('update_balance', user.balance);
+            socket.emit('cashout_confirmed', { win: win.toFixed(2) });
+            io.emit('admin_update_bets', activeBets);
         }
     });
 
-    socket.on('crash', (data) => { document.getElementById('multiplier').innerText = "FLEW AWAY"; document.getElementById('multiplier').style.color = "var(--red)"; document.getElementById('craft').style.display = 'none'; updateHistory(data.history); });
-    socket.on('update_balance', (b) => { wallet = b; document.getElementById('balance').innerText = wallet.toFixed(2); });
-
-    function handleBet(n) {
-        const amt = parseFloat(document.getElementById(`amt-${n}`).value);
-        if(!bets[n].active && !bets[n].queued) {
-            if(amt > wallet || amt <= 0) return;
-            socket.emit('place_bet', { u: user, amt: amt });
-            bets[n].amt = amt;
-            if(gameStatus === "FLYING") { bets[n].queued = true; updateButtonUI(n, "NEXT ROUND"); }
-            else { bets[n].active = true; updateButtonUI(n, "WAITING"); }
-        } else if(bets[n].active && gameStatus === "FLYING") {
-            socket.emit('cashout', { u: user }); bets[n].active = false; updateButtonUI(n, "CASHED");
+    // Admin commands remain the same as previous (Adjust balance, Crash, etc)
+    socket.on('admin_crash_now', () => { manualCrashTriggered = true; });
+    socket.on('admin_get_users', async () => {
+        const users = await User.find({});
+        socket.emit('admin_user_list', users);
+        socket.emit('admin_update_bets', activeBets);
+    });
+    socket.on('admin_create_user', async (data) => {
+        try { await User.create({ username: data.u.trim().toLowerCase(), password: data.p, balance: 0 }); 
+        const users = await User.find({}); socket.emit('admin_user_list', users); } catch(e){}
+    });
+    socket.on('admin_adjust_balance', async (data) => {
+        const user = await User.findOne({ username: data.u });
+        if (user) {
+            if(data.type === 'add') user.balance += parseFloat(data.amt);
+            else user.balance -= parseFloat(data.amt);
+            await user.save();
+            io.to(user.username).emit('update_balance', user.balance);
+            const users = await User.find({}); socket.emit('admin_user_list', users);
         }
-    }
+    });
+    socket.on('admin_delete_user', async (u) => { await User.deleteOne({ username: u }); const users = await User.find({}); io.emit('admin_user_list', users); });
+});
 
-    function updateButtonUI(n, state) {
-        const btn = document.getElementById(`btn-${n}`);
-        if(state === "WAITING") { btn.innerText = "WAITING..."; btn.style.background = "#444"; }
-        if(state === "CASH OUT") { btn.classList.add('btn-cash'); }
-        if(state === "CASHED") { btn.innerText = "CASHED"; btn.disabled = true; btn.style.background = "#222"; }
-        if(state === "NEXT ROUND") { btn.innerText = "NEXT ROUND"; btn.classList.add('btn-next'); }
-    }
-
-    function resetButton(i) { const btn = document.getElementById(`btn-${i}`); btn.innerText = "BET"; btn.disabled = false; btn.className = "btn-bet"; btn.style.background = "var(--green)"; bets[i] = { active: false, queued: false, amt: 0 }; }
-    function updateHistory(list) { const h = document.getElementById('history'); h.innerHTML = ""; if(list) list.forEach(v => h.innerHTML += `<div class="hist-item">${v}x</div>`); }
-    function showContact(t) { alert("Contact Agent WhatsApp:\n00923426693085"); }
-</script>
-</body>
-</html>
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, '0.0.0.0', () => { startRound(); });
