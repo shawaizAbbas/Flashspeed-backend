@@ -4,19 +4,16 @@ const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
-require('dotenv').config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// --- MAGIC FIX: This tells the server to look everywhere for your HTML files ---
-app.use(express.static(path.join(__dirname)));
-app.use(express.static(path.join(__dirname, 'public')));
+// Tells server to show your HTML files
+app.use(express.static(__dirname));
 
-// Root message (so you know it's working)
 app.get('/', (req, res) => {
-    res.send('<h1>Flashspeed Backend is Online</h1><p>Ready for connections!</p>');
+    res.send('<h1>Flashspeed Server is Live</h1><p>Checking Database...</p>');
 });
 
 const server = http.createServer(app);
@@ -24,9 +21,16 @@ const io = new Server(server, {
     cors: { origin: "*", methods: ["GET", "POST"] } 
 });
 
-// Database
+// Database Connection
 const mongoURI = process.env.MONGO_URI; 
-mongoose.connect(mongoURI).then(() => console.log("✅ MongoDB Connected")).catch(err => console.log("❌ DB Error:", err));
+
+if (!mongoURI) {
+    console.log("❌ ERROR: MONGO_URI is missing in Render Settings!");
+} else {
+    mongoose.connect(mongoURI)
+        .then(() => console.log("✅ MongoDB Connected"))
+        .catch(err => console.log("❌ MongoDB Error: " + err.message));
+}
 
 const UserSchema = new mongoose.Schema({
     username: { type: String, unique: true, required: true },
@@ -70,27 +74,67 @@ function runFlightLoop() {
 
 io.on('connection', (socket) => {
     socket.on('login', async (data) => {
-        const user = await User.findOne({ username: data.u, password: data.p });
-        if (user) {
-            if (user.isBlocked) return socket.emit('login_error', "BLOCKED");
-            socket.join(user.username);
-            socket.emit('login_success', { u: user.username, balance: user.balance, history: gameState.history });
-        } else {
-            socket.emit('login_error', "Invalid Login");
-        }
+        try {
+            const user = await User.findOne({ username: data.u, password: data.p });
+            if (user) {
+                if (user.isBlocked) return socket.emit('login_error', "BLOCKED");
+                socket.join(user.username);
+                socket.emit('login_success', { u: user.username, balance: user.balance, history: gameState.history });
+            } else {
+                socket.emit('login_error', "Invalid Login");
+            }
+        } catch (e) { socket.emit('login_error', "DB Error"); }
     });
 
     socket.on('place_bet', async (data) => {
-        const user = await User.findOne({ username: data.u });
-        if (user && user.balance >= data.amt && gameState.status === "PREPARING") {
-            user.balance -= data.amt;
-            await user.save();
-            activeBets.push({ u: data.u, amt: data.amt, cashed: false });
-            socket.emit('update_balance', user.balance);
-        }
+        try {
+            const user = await User.findOne({ username: data.u });
+            if (user && user.balance >= data.amt && gameState.status === "PREPARING") {
+                user.balance -= data.amt;
+                await user.save();
+                activeBets.push({ u: data.u, amt: data.amt, cashed: false });
+                socket.emit('update_balance', user.balance);
+            }
+        } catch (e) {}
     });
 
     socket.on('cashout', async (data) => {
         const bIndex = activeBets.findIndex(b => b.u === data.u && !b.cashed);
         if (bIndex > -1) {
-            activeBets[bIndex].
+            activeBets[bIndex].cashed = true;
+            const user = await User.findOne({ username: data.u });
+            const win = activeBets[bIndex].amt * gameState.multiplier;
+            user.balance += win;
+            await user.save();
+            socket.emit('update_balance', user.balance);
+            io.emit('player_won', { u: data.u, mult: gameState.multiplier.toFixed(2) });
+        }
+    });
+
+    socket.on('admin_get_users', async () => {
+        const users = await User.find({});
+        socket.emit('admin_user_list', users);
+    });
+
+    socket.on('admin_create_user', async (data) => {
+        try {
+            await User.create({ username: data.u, password: data.p, balance: 0 });
+            const users = await User.find({});
+            io.emit('admin_user_list', users);
+        } catch (e) {}
+    });
+
+    socket.on('admin_set_balance', async (data) => {
+        const user = await User.findOne({ username: data.u });
+        if (user) {
+            user.balance = parseFloat(data.amt);
+            await user.save();
+            io.to(data.u).emit('update_balance', user.balance);
+            const users = await User.find({});
+            io.emit('admin_user_list', users);
+        }
+    });
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => { startRound(); });
